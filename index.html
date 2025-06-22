@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Likert Tracker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="styles/styles9.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- ─── NAVBAR ─────────────────────────────────────────────── -->
+  <div class="navbar">
+  <button class="nav-btn active" onclick="switchTab('homeTab')"    id="homeTabBtn">🏠 Home</button>
+  <button class="nav-btn"        onclick="switchTab('metricsTab')" id="metricsTabBtn">➕ Metrics</button>
+  <button class="nav-btn"        onclick="switchTab('recordTab')"  id="recordTabBtn">📊 Record</button>
+  <button class="nav-btn"        onclick="switchTab('chartTab')"   id="chartTabBtn">📈 Chart</button>
+  <button class="nav-btn"        onclick="switchTab('historyTab')" id="historyTabBtn">📁 History</button>
+</div>
+  <!-- ─── HOMEPAGE TAB ────────────────────────────────────────── -->
+  <div id="homeTab" class="tab-content active">
+  <div class="card">
+    <h1>📋 Track It</h1>
+    <p><strong>Track It</strong> is a lightweight Likert-scale tracking app that works entirely on your device — no installs, no accounts, and no internet required.</p>
+    <p>You can:</p>
+    <ul>
+      <li>Create custom metrics to track (like mood, sleep, productivity...)</li>
+      <li>Record 1–5 Likert scale measurements with a date</li>
+      <li>See visual trends and download/upload your data as CSV</li>
+    </ul>
+    <p>Data is stored locally and privately in your browser.</p>  
+    <hr>
+<div class="footer">
+  <p>© Timothy Fraser 2025</p>
+  <div class="social-links">
+    <a href="https://scholar.google.com/citations?user=Ty7f6yAAAAAJ&hl=en&authuser=1" target="_blank" title="Google Scholar">📚</a>
+    <a href="https://timothyfraser.com" target="_blank" title="Website">🌐</a>
+    <a href="https://github.com/timothyfraser" target="_blank" title="GitHub">🐙</a>
+  </div>
+</div>
+  </div>
+</div>
+  <!-- ─── METRICS TAB ────────────────────────────────────────── -->
+  <div id="metricsTab" class="tab-content card">
+    <h2>Create New Metric</h2>
+    <input type="text" id="newMetric" placeholder="Enter metric name">
+    <button onclick="addMetric()">Add Metric</button>
+
+    <h3>Metric Summary</h3>
+    <table>
+      <thead><tr><th>Metric</th><th># Records</th><th>Delete</th></tr></thead>
+      <tbody id="metricCounts"></tbody>
+    </table>
+  </div>
+
+  <!-- ─── RECORD TAB ─────────────────────────────────────────── -->
+  <div id="recordTab" class="tab-content card">
+    <h2>Record Measurement</h2>
+
+    <select id="metricSelect"></select>
+
+    <div class="slider-container">
+      <label for="sliderValue">Value: <span id="sliderDisplay">3</span></label>
+      <input type="range" id="sliderValue" min="1" max="5" value="3">
+    </div>
+
+    <div class="date-selectors">
+      <select id="yearSelect"></select>
+      <select id="monthSelect"></select>
+      <select id="daySelect"></select>
+    </div>
+
+    <button onclick="recordMeasurement()">Record</button>
+  </div>
+
+  <!-- ─── HISTORY TAB ────────────────────────────────────────── -->
+  <div id="historyTab" class="tab-content card">
+    <h2>View / Manage Records</h2>
+
+<div class="filter-group">
+  <select id="logMetric" onchange="renderRecords()"></select>
+  <select id="logYear"   onchange="renderRecords()"></select>
+  <select id="logMonth"  onchange="renderRecords()"></select>
+  <select id="logDay"    onchange="renderRecords()"></select>
+  <button onclick="clearLogFilters()">Clear Filters</button>
+</div>
+
+    <table>
+      <thead><tr><th>Metric</th><th>Value</th><th>Date</th><th>Time</th><th>Delete</th></tr></thead>
+      <tbody id="recordTable"></tbody>
+    </table>
+    <hr></hr>
+        <h2>Upload / Download Records</h2>
+
+    <div class="actions">
+      <input type="file" accept=".csv" onchange="importCSV(event)">
+      <button onclick="downloadCSV()">Export CSV</button>
+    </div>
+  </div>
+  
+  
+  
+
+  <!-- ─── CHART TAB ──────────────────────────────────────────── -->
+  <div id="chartTab" class="tab-content card">
+    <h2>Chart</h2>
+
+    <div class="filter-group">
+      <select id="chartMetricSelect" onchange="renderChart()"></select>
+      <select id="chartYear"   onchange="renderChart()"></select>
+      <select id="chartMonth"  onchange="renderChart()"></select>
+      <button onclick="clearChartFilters()">Clear Filters</button>
+    </div>
+
+    <canvas id="chartCanvas" height="300"></canvas>
+  </div>
+
+</div>
+
+<script src="actions9.js"></script>
+</body>
+</html>
