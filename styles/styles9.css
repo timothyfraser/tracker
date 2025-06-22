@@ -1,0 +1,115 @@
+body {
+  font-family: sans-serif;
+  margin: 0;
+  background: #f4f4f4;
+  color: #333;
+}
+
+.container {
+  max-width: 600px;
+  margin: auto;
+  padding: 1rem;
+}
+
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  background: #007BFF;
+  color: white;
+  overflow-x: auto;
+}
+
+.nav-btn {
+  flex: 1;
+  padding: 1rem;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.nav-btn.active {
+  background: #0056b3;
+  font-weight: bold;
+}
+
+.tab-content {
+  display: none;
+  margin-top: 1rem;
+}
+
+.tab-content.active {
+  display: block;
+}
+.card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 1.5em;
+  margin: 1em;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+input[type="text"], select, button {
+  width: 100%;
+  margin: 0.5rem 0;
+  padding: 0.5rem;
+  font-size: 1rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+table, th, td {
+  border: 1px solid #ccc;
+}
+
+th, td {
+  padding: 0.5rem;
+  text-align: center;
+}
+
+.slider-container {
+  margin: 1rem 0;
+}
+
+.date-selectors, .filter-group, .actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 0.5rem 0;
+}
+
+canvas {
+  margin-top: 1rem;
+  background: white;
+  border-radius: 4px;
+}
+
+.footer {
+  text-align: center;
+  font-size: 0.9em;
+  color: #777;
+  margin-top: 1em;
+}
+
+.footer .social-links {
+  margin-top: 0.5em;
+}
+
+.footer .social-links a {
+  text-decoration: none;
+  font-size: 1.2em;
+  margin: 0 0.4em;
+  transition: transform 0.2s ease;
+}
+
+.footer .social-links a:hover {
+  transform: scale(1.2);
+}
