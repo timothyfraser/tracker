@@ -5,8 +5,9 @@
   <title>Likert Tracker</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="manifest" href="manifest.json" />
-  <link rel="stylesheet" href="styles/styles9.css" />
+  <link rel="stylesheet" href="styles/main.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 </head>
 <body>
 
@@ -17,7 +18,7 @@
   <button class="nav-btn active" onclick="switchTab('homeTab')"    id="homeTabBtn">🏠 Home</button>
   <button class="nav-btn"        onclick="switchTab('metricsTab')" id="metricsTabBtn">➕ Metrics</button>
   <button class="nav-btn"        onclick="switchTab('recordTab')"  id="recordTabBtn">📊 Record</button>
-  <button class="nav-btn"        onclick="switchTab('chartTab')"   id="chartTabBtn">📈 Chart</button>
+  <button class="nav-btn"        onclick="switchTab('chartTab')"   id="chartTabBtn">📈 Visualize</button>
   <button class="nav-btn"        onclick="switchTab('historyTab')" id="historyTabBtn">📁 History</button>
 </div>
   <!-- ─── HOMEPAGE TAB ────────────────────────────────────────── -->
@@ -71,6 +72,8 @@
       <select id="yearSelect"></select>
       <select id="monthSelect"></select>
       <select id="daySelect"></select>
+      <select id="hourSelect"></select>
+      <button type="button" onclick="updateDateTimeToCurrent()" style="width: auto; padding: 0.5rem 1rem;">🕐 Now</button>
     </div>
 
     <button onclick="recordMeasurement()">Record</button>
@@ -112,6 +115,14 @@
       <select id="chartMetricSelect" onchange="renderChart()"></select>
       <select id="chartYear"   onchange="renderChart()"></select>
       <select id="chartMonth"  onchange="renderChart()"></select>
+      <select id="chartDay"    onchange="renderChart()"></select>
+      <select id="chartAggregation" onchange="renderChart()">
+        <option value="hour">By Hour</option>
+        <option value="day">By Day</option>
+        <option value="week">By Week</option>
+        <option value="month">By Month</option>
+        <option value="year">By Year</option>
+      </select>
       <button onclick="clearChartFilters()">Clear Filters</button>
     </div>
 
@@ -120,6 +131,6 @@
 
 </div>
 
-<script src="actions9.js"></script>
+<script src="app.js"></script>
 </body>
 </html>

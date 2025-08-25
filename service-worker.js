@@ -2,7 +2,9 @@
 self.addEventListener('install', event => {
   event.waitUntil(caches.open('likert-cache').then(cache => cache.addAll([
     './',
-    './likert_tracker.html',
+    './index.html',
+    './app.js',
+    './styles/main.css',
     './manifest.json'
   ])));
   self.skipWaiting();

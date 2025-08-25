@@ -19,6 +19,11 @@ function switchTab(id) {
   document.querySelectorAll('.nav-btn').forEach(el  => el.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   document.getElementById(id + 'Btn').classList.add('active');
+  
+  // Update date/time selectors to current time when Record tab is opened
+  if (id === 'recordTab') {
+    updateDateTimeToCurrent();
+  }
 }
 
 /* ── METRIC CRUD ──────────────────────────────────────── */
@@ -53,8 +58,11 @@ function recordMeasurement() {
   const y  = document.getElementById('yearSelect').value;
   const m  = document.getElementById('monthSelect').value.padStart(2,'0');
   const d  = document.getElementById('daySelect').value.padStart(2,'0');
+  const h  = document.getElementById('hourSelect').value.padStart(2,'0');
   const date = `${y}-${m}-${d}`;
-  const timestamp = new Date().toISOString();
+  
+  // Create timestamp from selected date/time
+  const timestamp = new Date(`${y}-${m}-${d}T${h}:00:00`).toISOString();
 
   data.records.push({ metric, value, date, timestamp });
   saveData();
@@ -135,6 +143,61 @@ function renderRecords() {
   });
 }
 
+/* ── AGGREGATE DATA BY TIME PERIOD ───────────────────── */
+function aggregateDataByPeriod(records, period) {
+  const aggregated = {};
+  
+  records.forEach(record => {
+    const date = new Date(record.date);
+    const timestamp = new Date(record.timestamp);
+    let key;
+    let timeValue;
+    
+    switch(period) {
+      case 'hour':
+        // For hour aggregation, use the actual timestamp for proper time spacing
+        timeValue = timestamp;
+        key = `${record.date} ${timestamp.getHours().toString().padStart(2, '0')}:00`;
+        break;
+      case 'day':
+        // For day aggregation, use start of day
+        timeValue = new Date(date);
+        key = record.date;
+        break;
+      case 'week':
+        const weekStart = new Date(date);
+        weekStart.setDate(date.getDate() - date.getDay());
+        timeValue = weekStart;
+        key = weekStart.toISOString().split('T')[0];
+        break;
+      case 'month':
+        timeValue = new Date(date.getFullYear(), date.getMonth(), 1);
+        key = record.date.substring(0, 7);
+        break;
+      case 'year':
+        timeValue = new Date(date.getFullYear(), 0, 1);
+        key = record.date.substring(0, 4);
+        break;
+    }
+    
+    if (!aggregated[key]) {
+      aggregated[key] = { values: [], count: 0, timeValue: timeValue };
+    }
+    aggregated[key].values.push(+record.value);
+    aggregated[key].count++;
+  });
+  
+  // Calculate average for each period
+  const result = Object.entries(aggregated).map(([key, data]) => ({
+    period: key,
+    timeValue: data.timeValue,
+    average: data.values.reduce((a, b) => a + b, 0) / data.values.length,
+    count: data.count
+  }));
+  
+  return result.sort((a, b) => a.timeValue - b.timeValue);
+}
+
 /* ── RENDER CHART ─────────────────────────────────────── */
 function renderChart() {
   const metric = document.getElementById('chartMetricSelect').value;
@@ -142,28 +205,138 @@ function renderChart() {
 
   const year  = document.getElementById('chartYear').value;
   const month = document.getElementById('chartMonth').value;
+  const day   = document.getElementById('chartDay').value;
+  const aggregation = document.getElementById('chartAggregation').value;
 
   let rows = data.records.filter(r => r.metric === metric);
   if (year)  rows = rows.filter(r => r.date.startsWith(year));
   if (month) rows = rows.filter(r => r.date.slice(5,7) === month.padStart(2,'0'));
+  if (day)   rows = rows.filter(r => r.date.slice(8,10) === day.padStart(2,'0'));
 
-  const labels = rows.map(r => r.date);
-  const values = rows.map(r => +r.value);
+  if (rows.length === 0) {
+    if (chart) chart.destroy();
+    return;
+  }
+
+  // Aggregate data based on selected period
+  const aggregatedData = aggregateDataByPeriod(rows, aggregation);
+  
+  const timeValues = aggregatedData.map(d => d.timeValue);
+  const values = aggregatedData.map(d => d.average);
+  const counts = aggregatedData.map(d => d.count);
+
+  // Fix label text
+  const getAggregationLabel = (agg) => {
+    switch(agg) {
+      case 'hour': return 'hourly';
+      case 'day': return 'daily';
+      case 'week': return 'weekly';
+      case 'month': return 'monthly';
+      case 'year': return 'yearly';
+      default: return agg + 'ly';
+    }
+  };
+
+  // Get time unit and display format based on aggregation
+  const getTimeConfig = (agg) => {
+    switch(agg) {
+      case 'hour': return { unit: 'hour', displayFormats: { hour: 'MMM d, HH:mm' } };
+      case 'day': return { unit: 'day', displayFormats: { day: 'MMM d' } };
+      case 'week': return { unit: 'week', displayFormats: { week: 'MMM d' } };
+      case 'month': return { unit: 'month', displayFormats: { month: 'MMM yyyy' } };
+      case 'year': return { unit: 'year', displayFormats: { year: 'yyyy' } };
+      default: return { unit: 'day', displayFormats: { day: 'MMM d' } };
+    }
+  };
+
+  const timeConfig = getTimeConfig(aggregation);
 
   if (chart) chart.destroy();
   const ctx = document.getElementById('chartCanvas').getContext('2d');
-  chart = new Chart(ctx,{
-    type:'line',
-    data:{ labels,
-      datasets:[{ label:metric,data:values,fill:false,borderColor:'#007BFF',tension:0.2 }]},
-    options:{ responsive:true,
-      scales:{ y:{min:1,max:5,ticks:{stepSize:1}}}}
+  
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      datasets: [
+        {
+          label: `${metric} (${getAggregationLabel(aggregation)} average)`,
+          data: timeValues.map((time, index) => ({
+            x: time,
+            y: values[index]
+          })),
+          backgroundColor: 'rgba(0, 123, 255, 0.6)',
+          borderColor: 'rgba(0, 123, 255, 1)',
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          fill: false,
+          tension: 0.4
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        tooltip: {
+          callbacks: {
+            title: function(context) {
+              const date = new Date(context[0].parsed.x);
+              switch(aggregation) {
+                case 'hour': return date.toLocaleString('en-US', { 
+                  month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+                });
+                case 'day': return date.toLocaleDateString('en-US', { 
+                  month: 'short', day: 'numeric' 
+                });
+                case 'week': return `Week of ${date.toLocaleDateString('en-US', { 
+                  month: 'short', day: 'numeric' 
+                })}`;
+                case 'month': return date.toLocaleDateString('en-US', { 
+                  month: 'short', year: 'numeric' 
+                });
+                case 'year': return date.getFullYear().toString();
+                default: return date.toLocaleDateString();
+              }
+            },
+            label: function(context) {
+              const index = context[0].dataIndex;
+              return [
+                `Average: ${values[index].toFixed(2)}`,
+                `Records: ${counts[index]}`
+              ];
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          type: 'time',
+          time: {
+            unit: timeConfig.unit,
+            displayFormats: timeConfig.displayFormats
+          },
+          title: {
+            display: true,
+            text: 'Time'
+          }
+        },
+        y: {
+          min: 1,
+          max: 5,
+          ticks: { stepSize: 1 },
+          title: {
+            display: true,
+            text: 'Value'
+          }
+        }
+      }
+    }
   });
 }
 
 /* ── CLEAR CHART FILTERS ─────────────────────────────── */
 function clearChartFilters() {
-  ['chartYear','chartMonth'].forEach(id => document.getElementById(id).value = '');
+  ['chartYear','chartMonth','chartDay'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('chartAggregation').value = 'hour'; // Reset to default
   renderChart();
 }
 
@@ -191,16 +364,30 @@ function downloadCSV(){
   a.download='likert_data.csv'; a.click(); URL.revokeObjectURL(a.href);
 }
 
+/* ── UPDATE DATE/TIME TO CURRENT ─────────────────────── */
+function updateDateTimeToCurrent() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = (now.getMonth() + 1).toString().padStart(2, '0');
+  const day = now.getDate().toString().padStart(2, '0');
+  const hour = now.getHours().toString().padStart(2, '0');
+  
+  document.getElementById('yearSelect').value = year;
+  document.getElementById('monthSelect').value = month;
+  document.getElementById('daySelect').value = day;
+  document.getElementById('hourSelect').value = hour;
+}
+
 /* ── DATE SELECTOR POPULATION ────────────────────────── */
 function populateDateSelectors() {
   const now = new Date();
-  const year = now.getFullYear(), month = now.getMonth() + 1, day = now.getDate();
+  const year = now.getFullYear(), month = now.getMonth() + 1, day = now.getDate(), hour = now.getHours();
   const pad = n => n.toString().padStart(2, '0');
   const range = (start, end) => Array.from({ length: end - start + 1 }, (_, i) => i + start);
 
   // IDs grouped by function
-  const recordSelectors = ['yearSelect', 'monthSelect', 'daySelect'];
-  const filterSelectors = ['logYear', 'chartYear', 'logMonth', 'chartMonth', 'logDay'];
+  const recordSelectors = ['yearSelect', 'monthSelect', 'daySelect', 'hourSelect'];
+  const filterSelectors = ['logYear', 'chartYear', 'logMonth', 'chartMonth', 'logDay', 'chartDay'];
 
   // Add blank option to filters
   filterSelectors.forEach(id => {
@@ -232,6 +419,14 @@ function populateDateSelectors() {
     if (d === day) opt.selected = true;
     document.getElementById('daySelect').appendChild(opt); // record tab
     document.getElementById('logDay').appendChild(new Option(pad(d), pad(d)));
+    document.getElementById('chartDay').appendChild(new Option(pad(d), pad(d)));
+  }
+
+  // Hours (0-23)
+  for (let h = 0; h <= 23; h++) {
+    const opt = new Option(pad(h), pad(h));
+    if (h === hour) opt.selected = true;
+    document.getElementById('hourSelect').appendChild(opt); // record tab
   }
 }
 
@@ -252,4 +447,3 @@ function clearLogFilters() {
 function renderAll(){ renderMetrics(); renderRecords(); renderChart(); }
 renderAll();                           // initial paint
 switchTab('homeTab');
-  
