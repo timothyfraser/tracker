@@ -13,6 +13,19 @@ function saveData() {
   renderAll();
 }
 
+function migrateDataIfNeeded() {
+  // Migrate old data format to new format with scales
+  if (data.metrics.length > 0 && typeof data.metrics[0] === 'string') {
+    // Convert old string-based metrics to new object format
+    const oldMetrics = data.metrics;
+    data.metrics = oldMetrics.map(metric => ({
+      name: metric,
+      scale: 'likert' // Default to likert for existing metrics
+    }));
+    localStorage.setItem('likert_data', JSON.stringify(data));
+  }
+}
+
 /* ── NAVIGATION ───────────────────────────────────────── */
 function switchTab(id) {
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -26,24 +39,65 @@ function switchTab(id) {
   }
 }
 
+/* ── SCALE MANAGEMENT ─────────────────────────────────── */
+function getScaleLabel(scale) {
+  switch(scale) {
+    case 'likert': return 'Likert (1-5)';
+    case 'binary': return 'Binary (0-1)';
+    case 'continuous': return 'Continuous (0-100)';
+    default: return scale;
+  }
+}
+
+function getScaleConfig(scale) {
+  switch(scale) {
+    case 'likert':
+      return { min: 1, max: 5, step: 1, default: 3 };
+    case 'binary':
+      return { min: 0, max: 1, step: 1, default: 1 };
+    case 'continuous':
+      return { min: 0, max: 100, step: 5, default: 50 };
+    default:
+      return { min: 1, max: 5, step: 1, default: 3 };
+  }
+}
+
+function updateSliderForMetric(metricName) {
+  const metric = data.metrics.find(m => m.name === metricName);
+  if (!metric) return;
+  
+  const config = getScaleConfig(metric.scale);
+  const slider = document.getElementById('sliderValue');
+  const display = document.getElementById('sliderDisplay');
+  
+  slider.min = config.min;
+  slider.max = config.max;
+  slider.step = config.step;
+  slider.value = config.default;
+  display.textContent = config.default;
+}
+
 /* ── METRIC CRUD ──────────────────────────────────────── */
 function addMetric() {
   const input  = document.getElementById('newMetric');
+  const scaleSelect = document.getElementById('metricScale');
   const metric = input.value.trim();
+  const scale = scaleSelect.value;
 
-  if (metric.length === 0)       { alert('Metric name cannot be blank.'); return; }
-  if (data.metrics.includes(metric)) { alert('Metric already exists.');    return; }
+  if (metric.length === 0) { alert('Metric name cannot be blank.'); return; }
+  if (!scale) { alert('Please select a scale.'); return; }
+  if (data.metrics.some(m => m.name === metric)) { alert('Metric already exists.'); return; }
 
-  data.metrics.push(metric);
+  data.metrics.push({ name: metric, scale: scale });
   input.value = '';
   input.focus();
   saveData();
 }
 
-function deleteMetric(metric) {
-  if (!confirm(`Delete metric "${metric}" and all its measurements?`)) return;
-  data.metrics  = data.metrics.filter(m => m !== metric);
-  data.records  = data.records.filter(r => r.metric !== metric);
+function deleteMetric(metricName) {
+  if (!confirm(`Delete metric "${metricName}" and all its measurements?`)) return;
+  data.metrics  = data.metrics.filter(m => m.name !== metricName);
+  data.records  = data.records.filter(r => r.metric !== metricName);
   saveData();
 }
 
@@ -73,6 +127,20 @@ function deleteRecord(index) {
   saveData();
 }
 
+function deleteAllRecords() {
+  if (!confirm('⚠️ WARNING: This will permanently delete ALL your records!\n\nThis action cannot be undone. Are you sure you want to continue?')) {
+    return;
+  }
+  
+  // Double confirmation for extra safety
+  if (!confirm('Final confirmation: Delete ALL records?\n\nThis will remove all your tracking data permanently.')) {
+    return;
+  }
+  
+  data.records = [];
+  saveData();
+}
+
 /* ── RENDER METRIC SELECTS & SUMMARY ──────────────────── */
 function renderMetrics() {
   const ids = ['metricSelect', 'chartMetricSelect', 'logMetric'];
@@ -88,23 +156,34 @@ function renderMetrics() {
   ids.forEach(id => {
     const sel = document.getElementById(id);
     sel.innerHTML = '<option value="">Metric</option>';
-    data.metrics.forEach(m => sel.appendChild(new Option(m, m)));
-    if (previousSelections[id] && data.metrics.includes(previousSelections[id])) {
+    data.metrics.forEach(m => sel.appendChild(new Option(m.name, m.name)));
+    if (previousSelections[id] && data.metrics.some(m => m.name === previousSelections[id])) {
       sel.value = previousSelections[id];  // restore selection
     }
   });
 
+  // Update slider if metricSelect has a value
+  const metricSelect = document.getElementById('metricSelect');
+  if (metricSelect.value) {
+    updateSliderForMetric(metricSelect.value);
+  }
+
+  // Ensure event listener is attached
+  metricSelect.onchange = (e) => updateSliderForMetric(e.target.value);
+
   // rebuild metric count table
   const cntBody = document.getElementById('metricCounts');
   const counts  = {};
-  data.metrics.forEach(m => counts[m] = 0);
+  data.metrics.forEach(m => counts[m.name] = 0);
   data.records.forEach(r => counts[r.metric]++);
   cntBody.innerHTML = '';
   Object.entries(counts)
         .sort((a,b) => b[1]-a[1])
         .forEach(([m,c]) => {
+          const metricObj = data.metrics.find(metric => metric.name === m);
+          const scaleLabel = getScaleLabel(metricObj.scale);
           cntBody.innerHTML += `<tr>
-              <td>${m}</td><td>${c}</td>
+              <td>${m}</td><td>${scaleLabel}</td><td>${c}</td>
               <td><button onclick="deleteMetric('${m}')">🗑️</button></td>
             </tr>`;
         });
@@ -132,8 +211,11 @@ function renderRecords() {
     if (metric && r.metric !== metric) return;
 
     const row = document.createElement('tr');
+    const metricObj = data.metrics.find(m => m.name === r.metric);
+    const scaleLabel = metricObj ? getScaleLabel(metricObj.scale) : 'Unknown';
     row.innerHTML = `
       <td>${r.metric}</td>
+      <td>${scaleLabel}</td>
       <td>${r.value}</td>
       <td>${r.date}</td>
       <td>${r.timestamp.split('T')[1].split('.')[0]}</td>
@@ -203,6 +285,9 @@ function renderChart() {
   const metric = document.getElementById('chartMetricSelect').value;
   if (!metric) { if (chart) chart.destroy(); return; }
 
+  const metricObj = data.metrics.find(m => m.name === metric);
+  const scaleConfig = getScaleConfig(metricObj.scale);
+
   const year  = document.getElementById('chartYear').value;
   const month = document.getElementById('chartMonth').value;
   const day   = document.getElementById('chartDay').value;
@@ -224,6 +309,10 @@ function renderChart() {
   const timeValues = aggregatedData.map(d => d.timeValue);
   const values = aggregatedData.map(d => d.average);
   const counts = aggregatedData.map(d => d.count);
+
+  // Also prepare raw data points for scatter plot
+  const rawTimeValues = rows.map(r => new Date(r.timestamp));
+  const rawValues = rows.map(r => +r.value);
 
   // Fix label text
   const getAggregationLabel = (agg) => {
@@ -259,15 +348,29 @@ function renderChart() {
     data: {
       datasets: [
         {
-          label: `${metric} (${getAggregationLabel(aggregation)} average)`,
+          label: `${metric} (raw data)`,
+          data: rawTimeValues.map((time, index) => ({
+            x: time,
+            y: rawValues[index]
+          })),
+          backgroundColor: 'rgba(0, 123, 255, 0.3)',
+          borderColor: 'rgba(0, 123, 255, 0.6)',
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          fill: false,
+          tension: 0,
+          showLine: false // Only show points, not connecting lines
+        },
+        {
+          label: `${metric} (trend)`,
           data: timeValues.map((time, index) => ({
             x: time,
             y: values[index]
           })),
-          backgroundColor: 'rgba(0, 123, 255, 0.6)',
-          borderColor: 'rgba(0, 123, 255, 1)',
-          pointRadius: 4,
-          pointHoverRadius: 6,
+          backgroundColor: 'rgba(220, 53, 69, 0.6)',
+          borderColor: 'rgba(220, 53, 69, 1)',
+          pointRadius: 0,
+          pointHoverRadius: 0,
           fill: false,
           tension: 0.4
         }
@@ -298,11 +401,19 @@ function renderChart() {
               }
             },
             label: function(context) {
-              const index = context[0].dataIndex;
-              return [
-                `Average: ${values[index].toFixed(2)}`,
-                `Records: ${counts[index]}`
-              ];
+              const datasetIndex = context[0].datasetIndex;
+              const dataIndex = context[0].dataIndex;
+              
+              if (datasetIndex === 0) {
+                // Raw data points
+                return `Raw Value: ${rawValues[dataIndex]}`;
+              } else {
+                // Trend line points
+                return [
+                  `Average: ${values[dataIndex].toFixed(2)}`,
+                  `Records: ${counts[dataIndex]}`
+                ];
+              }
             }
           }
         }
@@ -320,9 +431,9 @@ function renderChart() {
           }
         },
         y: {
-          min: 1,
-          max: 5,
-          ticks: { stepSize: 1 },
+          min: scaleConfig.min,
+          max: scaleConfig.max,
+          ticks: { stepSize: scaleConfig.step },
           title: {
             display: true,
             text: 'Value'
@@ -345,11 +456,28 @@ function importCSV(ev){
   const f=ev.target.files[0]; if(!f)return;
   const rd=new FileReader();
   rd.onload=e=>{
-    e.target.result.trim().split('\n').slice(1).forEach(l=>{
-      const[metric,value,date,timestamp]=l.split(',');
-      if(!data.metrics.includes(metric))data.metrics.push(metric);
-      if(!data.records.some(r=>r.metric===metric&&r.timestamp===timestamp))
-        data.records.push({metric,value,date,timestamp});
+    const lines = e.target.result.trim().split('\n');
+    const header = lines[0].split(',');
+    const hasScale = header.includes('scale');
+    
+    lines.slice(1).forEach(l=>{
+      const values = l.split(',');
+      let metric, scale, value, date, timestamp;
+      
+      if (hasScale) {
+        [metric, scale, value, date, timestamp] = values;
+      } else {
+        // Handle old format without scale
+        [metric, value, date, timestamp] = values;
+        scale = 'likert'; // Default to likert for old data
+      }
+      
+      if(!data.metrics.some(m=>m.name===metric)) {
+        data.metrics.push({name: metric, scale: scale});
+      }
+      if(!data.records.some(r=>r.metric===metric&&r.timestamp===timestamp)) {
+        data.records.push({metric, value, date, timestamp});
+      }
     });
     saveData();
   };
@@ -357,8 +485,12 @@ function importCSV(ev){
 }
 
 function downloadCSV(){
-  let csv='metric,value,date,timestamp\n';
-  data.records.forEach(r=>csv+=`${r.metric},${r.value},${r.date},${r.timestamp}\n`);
+  let csv='metric,scale,value,date,timestamp\n';
+  data.records.forEach(r => {
+    const metricObj = data.metrics.find(m => m.name === r.metric);
+    const scale = metricObj ? metricObj.scale : 'likert';
+    csv+=`${r.metric},${scale},${r.value},${r.date},${r.timestamp}\n`;
+  });
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
   a.download='likert_data.csv'; a.click(); URL.revokeObjectURL(a.href);
@@ -436,6 +568,7 @@ document.getElementById('sliderValue').addEventListener('input',
 
 /* ── BOOTSTRAP ───────────────────────────────────────── */
 populateDateSelectors();
+migrateDataIfNeeded(); // Call migration after DOM is ready
 
 function clearLogFilters() {
   ['logMetric', 'logYear', 'logMonth', 'logDay'].forEach(id => {

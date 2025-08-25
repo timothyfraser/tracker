@@ -1,6 +1,6 @@
-# Track It - Likert Scale Tracker
+# Track It - Multi-Scale Tracker
 
-A lightweight, privacy-focused web application for tracking personal metrics using Likert scales (1-5 ratings). Perfect for monitoring mood, sleep quality, productivity, or any other personal metrics over time.
+A lightweight, privacy-focused web application for tracking personal metrics using different measurement scales. Perfect for monitoring mood, sleep quality, productivity, or any other personal metrics over time.
 
 🌐 **Live Demo**: [timothyfraser.github.io/tracker](https://timothyfraser.github.io/tracker)
 
@@ -12,12 +12,13 @@ A lightweight, privacy-focused web application for tracking personal metrics usi
 - **📁 Data Management**: Import/export data as CSV files
 - **⚡ Progressive Web App**: Can be installed on mobile devices for offline use
 - **🎯 Custom Metrics**: Create and track any personal metrics you want
+- **📏 Multiple Scales**: Support for Likert (1-5), Binary (0-1), and Continuous (0-100) scales
 
 ## 🚀 Quick Start
 
 1. **Visit the app**: Go to [timothyfraser.github.io/tracker](https://timothyfraser.github.io/tracker)
-2. **Create your first metric**: Click "➕ Metrics" and add a metric name (e.g., "Mood", "Sleep Quality")
-3. **Record your first measurement**: Click "📊 Record", select your metric, set a value (1-5), and choose a date
+2. **Create your first metric**: Click "➕ Metrics", add a metric name (e.g., "Mood", "Sleep Quality"), and select a scale
+3. **Record your first measurement**: Click "📊 Record", select your metric, set a value using the appropriate scale, and choose a date
 4. **View your data**: Use "📈 Chart" to see trends or "📁 History" to view all records
 
 ## 📖 How to Use
@@ -25,13 +26,21 @@ A lightweight, privacy-focused web application for tracking personal metrics usi
 ### Creating Metrics
 - Navigate to the **Metrics** tab
 - Enter a metric name (e.g., "Energy Level", "Stress", "Productivity")
+- Select a measurement scale:
+  - **Likert (1-5)**: Traditional 5-point scale, default value: 3
+  - **Binary (0-1)**: Yes/No or True/False, default value: 1
+  - **Continuous (0-100)**: Percentage or intensity scale in intervals of 5, default value: 50
 - Click "Add Metric"
-- Your metric will appear in the summary table
+- Your metric will appear in the summary table with its scale type
 
 ### Recording Measurements
 - Go to the **Record** tab
 - Select a metric from the dropdown
-- Use the slider to set a value (1 = lowest, 5 = highest)
+- The slider will automatically adjust to the correct scale for your selected metric
+- Use the slider to set a value appropriate for the scale:
+  - **Likert**: 1 (lowest) to 5 (highest)
+  - **Binary**: 0 (No/False) or 1 (Yes/True)
+  - **Continuous**: 0 to 100 in steps of 5
 - **Date & Time Options**:
   - **Option A**: Use current time - the date/time fields auto-populate with current values
   - **Option B**: Manually adjust date and time using the dropdown selectors
@@ -79,7 +88,10 @@ tracker/
 The app stores data in the following JSON structure:
 ```json
 {
-  "metrics": ["Mood", "Sleep Quality"],
+  "metrics": [
+    {"name": "Mood", "scale": "likert"},
+    {"name": "Sleep Quality", "scale": "continuous"}
+  ],
   "records": [
     {
       "metric": "Mood",
@@ -93,9 +105,9 @@ The app stores data in the following JSON structure:
 
 ### CSV Export Format
 ```csv
-metric,value,date,timestamp
-Mood,4,2025-01-15,2025-01-15T10:30:00.000Z
-Sleep Quality,3,2025-01-15,2025-01-15T10:31:00.000Z
+metric,scale,value,date,timestamp
+Mood,likert,4,2025-01-15,2025-01-15T10:30:00.000Z
+Sleep Quality,continuous,75,2025-01-15,2025-01-15T10:31:00.000Z
 ```
 
 ## 🔧 Development

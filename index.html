@@ -29,7 +29,7 @@
     <p>You can:</p>
     <ul>
       <li>Create custom metrics to track (like mood, sleep, productivity...)</li>
-      <li>Record 1–5 Likert scale measurements with a date</li>
+      <li>Record Likert, Binary, or Continuous scale measurements with a date or datetime</li>
       <li>See visual trends and download/upload your data as CSV</li>
     </ul>
     <p>Data is stored locally and privately in your browser.</p>  
@@ -48,11 +48,17 @@
   <div id="metricsTab" class="tab-content card">
     <h2>Create New Metric</h2>
     <input type="text" id="newMetric" placeholder="Enter metric name">
+    <select id="metricScale">
+      <option value="">Select Scale</option>
+      <option value="likert">Likert (1-5)</option>
+      <option value="binary">Binary (0-1)</option>
+      <option value="continuous">Continuous (0-100)</option>
+    </select>
     <button onclick="addMetric()">Add Metric</button>
 
     <h3>Metric Summary</h3>
     <table>
-      <thead><tr><th>Metric</th><th># Records</th><th>Delete</th></tr></thead>
+      <thead><tr><th>Metric</th><th>Scale</th><th># Records</th><th>Delete</th></tr></thead>
       <tbody id="metricCounts"></tbody>
     </table>
   </div>
@@ -92,7 +98,7 @@
 </div>
 
     <table>
-      <thead><tr><th>Metric</th><th>Value</th><th>Date</th><th>Time</th><th>Delete</th></tr></thead>
+      <thead><tr><th>Metric</th><th>Scale</th><th>Value</th><th>Date</th><th>Time</th><th>Delete</th></tr></thead>
       <tbody id="recordTable"></tbody>
     </table>
     <hr></hr>
@@ -101,6 +107,12 @@
     <div class="actions">
       <input type="file" accept=".csv" onchange="importCSV(event)">
       <button onclick="downloadCSV()">Export CSV</button>
+    </div>
+    
+    <hr>
+    <h2>Danger Zone</h2>
+    <div class="actions">
+      <button onclick="deleteAllRecords()" style="background-color: #dc3545; color: white;">🗑️ Delete All Records</button>
     </div>
   </div>
   
